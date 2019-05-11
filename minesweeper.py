@@ -4,7 +4,6 @@ import time
 from contextlib import suppress
 from random import randrange
 
-
 """
 in array:
 -1 = blank
@@ -13,12 +12,12 @@ in array:
 0,1,2... = clicked squares with n bombs around 
 """
 
+loss=False
+
 #PART 0 (setup)
-def setUp(difficultyStr):
+def setUp(driver, difficultyStr):
     boardSize={"beginner":(9,9), "intermediate":(16,16), "expert":(16,30)}[difficultyStr]
     board=np.full(boardSize,-1)
-
-    driver = webdriver.Chrome()
     
     if difficultyStr=="expert":
         difficultyStr=""
@@ -26,7 +25,7 @@ def setUp(difficultyStr):
 
     game = findGameBoard(driver)
 
-    return driver,board, game
+    return board, game
 
 def findGameBoard(driver):
     outerContainer = driver.find_element_by_xpath("//td")
@@ -37,6 +36,7 @@ def findGameBoard(driver):
     return game
 
 #PART 1
+"""
 def addAllDataToArray(game, board):
     start=time.time()
     
@@ -46,17 +46,65 @@ def addAllDataToArray(game, board):
     
     print("done adding data, took " + str(time.time()-start)+" seconds")
     return board
+"""
 
 def getDataPoint(game, i, j):
+    global loss
     #square = game.find_element_by_xpath("//div[@id='"+str(i+1)+"_"+str(j+1)+"']")
     square = game.find_element_by_id(str(i+1)+"_"+str(j+1)) #change this to speed up?
     squareData = square.get_attribute("class").split(" ")[-1][-1]
     try:
         value = {"d":-2, "k":-1}[squareData] #flagge"d" -> -2, blan"k" -> -1
     except KeyError:
-        value = int(squareData)
+        try:
+            value = int(squareData)
+        except ValueError:
+            value = 101
+            loss = True
     return value
 
+
+def addNewDataToArray(game,board,leftClickList):
+    start=time.time()
+    checkedList=[]
+    ##print(leftClickList)
+    for x in leftClickList:
+        updateArrayWithNeighbors(game,board,x[0],x[1],checkedList)
+    print("done adding data recursively, took " + str(time.time()-start)+" seconds")
+    return board
+
+def updateArrayWithNeighbors(game,board,i,j,checkedList):
+
+    checkedList.append((i,j))
+    
+    value=getDataPoint(game,i,j)
+    board[i][j]=value
+
+    #print("value at "+str(i)+","+str(j)+" is " +str(value))
+    if value==0:
+        if i!=0 and j!=0 and (i-1,j-1) not in checkedList:
+            updateArrayWithNeighbors(game,board,i-1,j-1,checkedList)
+        if i!=0:
+            if (i-1,j) not in checkedList:
+                updateArrayWithNeighbors(game,board,i-1,j,checkedList)
+            with suppress(IndexError):
+                if (i-1,j+1) not in checkedList:
+                    updateArrayWithNeighbors(game,board,i-1,j+1,checkedList)
+        with suppress(IndexError):
+            if (i,j+1) not in checkedList:
+                updateArrayWithNeighbors(game,board,i,j+1,checkedList)
+        with suppress(IndexError):
+            if (i+1,j+1) not in checkedList:
+                updateArrayWithNeighbors(game,board,i+1,j+1,checkedList)
+        with suppress(IndexError):
+            if (i+1,j) not in checkedList:
+                updateArrayWithNeighbors(game,board,i+1,j,checkedList)
+        if j!=0:
+            with suppress(IndexError):
+                if (i+1,j-1) not in checkedList:
+                    updateArrayWithNeighbors(game,board,i+1,j-1,checkedList)
+            if (i,j-1) not in checkedList:
+                updateArrayWithNeighbors(game,board,i,j-1,checkedList)
 
 
 """
@@ -163,16 +211,16 @@ def flagOrClickWithNoMovesLeft(board, leftClickList):
 
 
 #PART 3
-def clickAll(game,leftClickList, rightClickList):
+def clickAll(driver, game, board, leftClickList, rightClickList):
     actions = webdriver.common.action_chains.ActionChains(driver)
     for pair in leftClickList:
-        clickOnElt(actions,game,pair[0],pair[1],True)
+        clickOnElt(actions,game,board,pair[0],pair[1],True)
     for pair in rightClickList:
         if board[pair[0]][pair[1]]==-1:
-            clickOnElt(actions,game,pair[0],pair[1],False)
+            clickOnElt(actions,game,board,pair[0],pair[1],False)
     actions.perform()
 
-def clickOnElt(actions,game,i,j,left):
+def clickOnElt(actions,game,board,i,j,left):
     squareToClick = game.find_element_by_id(str(i+1)+"_"+str(j+1))
     if left:
         actions.click(squareToClick)
@@ -181,26 +229,41 @@ def clickOnElt(actions,game,i,j,left):
         board[i][j]=-2
 
 #RUN
-if __name__ == "__main__":
-    driver, board, game = setUp("beginner")
+def run(driver):
+    board, game = setUp(driver, "expert")
+    global loss
+
+    listL=[(randrange(board.shape[0]),randrange(board.shape[1]))]
+    clickAll(driver, game, board,listL,[])
     
-    clickAll(game,[(randrange(board.shape[0]+1),randrange(board.shape[1]+1))],[])
-    
-    while True:
-        board = addAllDataToArray(game,board)
-        list1, list2 = flagOrClick(board)
-        if len(list1)==0 and len(list2)==0:
-            flagOrClickWithNoMovesLeft(board, list1)
+    while not loss:
+       # board = addAllDataToArray(game,board)
+        board = addNewDataToArray(game,board,listL)
+        
+        listL, listR = flagOrClick(board)
+        if len(listL)==0 and len(listR)==0:
+            flagOrClickWithNoMovesLeft(board, listL)
             print("no moves found, picking random")
-        clickAll(game,list1,list2)
+        clickAll(driver, game, board, listL, listR)
         try:
             alert = driver.switch_to.alert
             print("game over!")
             break
         except: #NoAlertPresentException
             pass
-        #if deadface, then gamelost
-    
+    if loss:
+        face=game.find_element_by_id("face")
+        action = webdriver.common.action_chains.ActionChains(driver)
+        action.click(face)
+        action.perform()
+        loss=False
+        print("you lost")
+        run(driver)
+            
+
+if __name__ == "__main__":
+    driver = webdriver.Chrome()
+    run(driver)
 
 
     
