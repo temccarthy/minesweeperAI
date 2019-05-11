@@ -218,7 +218,10 @@ def clickAll(driver, game, board, leftClickList, rightClickList):
     for pair in rightClickList:
         if board[pair[0]][pair[1]]==-1:
             clickOnElt(actions,game,board,pair[0],pair[1],False)
-    actions.perform()
+    try:
+        actions.perform()
+    except: #alert error if halfway through clicking
+        pass
 
 def clickOnElt(actions,game,board,i,j,left):
     squareToClick = game.find_element_by_id(str(i+1)+"_"+str(j+1))
@@ -229,8 +232,8 @@ def clickOnElt(actions,game,board,i,j,left):
         board[i][j]=-2
 
 #RUN
-def run(driver):
-    board, game = setUp(driver, "expert")
+def run(driver,losses):
+    board, game = setUp(driver, "beginner")
     global loss
 
     listL=[(randrange(board.shape[0]),randrange(board.shape[1]))]
@@ -247,7 +250,7 @@ def run(driver):
         clickAll(driver, game, board, listL, listR)
         try:
             alert = driver.switch_to.alert
-            print("game over!")
+            print("you won after "+str(losses)+" losses")
             break
         except: #NoAlertPresentException
             pass
@@ -258,12 +261,14 @@ def run(driver):
         action.perform()
         loss=False
         print("you lost")
-        run(driver)
+        losses+=1
+        run(driver,losses)
             
 
 if __name__ == "__main__":
+    losses=0
     driver = webdriver.Chrome()
-    run(driver)
+    run(driver,losses)
 
 
     
