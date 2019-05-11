@@ -199,6 +199,7 @@ if __name__ == "__main__":
             break
         except: #NoAlertPresentException
             pass
+        #if deadface, then gamelost
     
 
 
