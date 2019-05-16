@@ -36,22 +36,10 @@ def findGameBoard(driver):
     return game
 
 #PART 1
-"""
-def addAllDataToArray(game, board):
-    start=time.time()
-    
-    for (i,j), item in np.ndenumerate(board):
-        if item ==-1:
-            board[i][j] = getDataPoint(game, i, j)
-    
-    print("done adding data, took " + str(time.time()-start)+" seconds")
-    return board
-"""
 
 def getDataPoint(game, i, j):
     global loss
-    #square = game.find_element_by_xpath("//div[@id='"+str(i+1)+"_"+str(j+1)+"']")
-    square = game.find_element_by_id(str(i+1)+"_"+str(j+1)) #change this to speed up?
+    square = game.find_element_by_id(str(i+1)+"_"+str(j+1))
     squareData = square.get_attribute("class").split(" ")[-1][-1]
     try:
         value = {"d":-2, "k":-1}[squareData] #flagge"d" -> -2, blan"k" -> -1
@@ -67,7 +55,6 @@ def getDataPoint(game, i, j):
 def addNewDataToArray(game,board,leftClickList):
     start=time.time()
     checkedList=[]
-    ##print(leftClickList)
     for x in leftClickList:
         updateArrayWithNeighbors(game,board,x[0],x[1],checkedList)
     print("done adding data recursively, took " + str(time.time()-start)+" seconds")
@@ -80,7 +67,6 @@ def updateArrayWithNeighbors(game,board,i,j,checkedList):
     value=getDataPoint(game,i,j)
     board[i][j]=value
 
-    #print("value at "+str(i)+","+str(j)+" is " +str(value))
     if value==0:
         if i!=0 and j!=0 and (i-1,j-1) not in checkedList:
             updateArrayWithNeighbors(game,board,i-1,j-1,checkedList)
@@ -107,51 +93,6 @@ def updateArrayWithNeighbors(game,board,i,j,checkedList):
                 updateArrayWithNeighbors(game,board,i,j-1,checkedList)
 
 
-"""
-def addAllDataToArray2(game,board,initialA):
-    start=time.time()
-    a=initialA
-    i=1
-    j=1
-    while True:
-        print("checking div["+str(a)+"]")
-        square = game.find_element_by_xpath("//div["+str(a)+"]")
-        if square.get_attribute("id")==str(i)+"_"+str(j):
-            print("found "+str(i)+"_"+str(j))
-            board[i-1][j-1]=interpretSquareClass(square)
-            j+=1
-            if j==board.shape[1]+1:
-                j=1
-                i+=1
-                if i==board.shape[0]+1:
-                    break
-        a+=1
-                
-
-    print("done adding data, took " + str(time.time()-start)+" seconds")
-    return board
-
-def interpretSquareClass(square):
-    squareData = square.get_attribute("class").split(" ")[-1][-1]
-    try:
-        value = {"d":-2, "k":-1}[squareData] #flagge"d" -> -2, blan"k" -> -1
-    except KeyError:
-        value = int(squareData)
-    return value
-    
-
-def find1_1Div(game):
-    a=1
-    while True:
-        possibleSquare = game.find_element_by_xpath("//div["+str(a)+"]")
-        if possibleSquare.get_attribute("id")=="1_1":
-            break
-        else:
-            a+=1
-    return a
-"""
-
-
 #PART 2
 def flagOrClick(board):
     start=time.time()
@@ -169,11 +110,7 @@ def flagOrClick(board):
             if d[-1]+d[-2]==item:
                 for x in neighborList:
                     if x[2]==-1:
-                        flagSquareList.append(x)    
-
-            d={-2:0, -1:0}
-            for a,b,board[a][b] in neighborList:
-                d[board[a][b]]=d.get(board[a][b],0)+1
+                        flagSquareList.append(x)
                 
             if d[-2]==item:
                 for x in neighborList:
@@ -207,7 +144,6 @@ def flagOrClickWithNoMovesLeft(board, leftClickList):
     i,j = np.where(board==-1)
     rand=randrange(len(i))
     leftClickList.append((i[rand],j[rand]))
-    #print(i,j)
 
 
 #PART 3
@@ -233,14 +169,13 @@ def clickOnElt(actions,game,board,i,j,left):
 
 #RUN
 def run(driver,losses):
-    board, game = setUp(driver, "beginner")
+    board, game = setUp(driver, "intermediate")
     global loss
 
     listL=[(randrange(board.shape[0]),randrange(board.shape[1]))]
     clickAll(driver, game, board,listL,[])
     
     while not loss:
-       # board = addAllDataToArray(game,board)
         board = addNewDataToArray(game,board,listL)
         
         listL, listR = flagOrClick(board)
