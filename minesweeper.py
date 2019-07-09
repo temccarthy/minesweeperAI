@@ -169,7 +169,7 @@ def clickOnElt(actions,game,board,i,j,left):
 
 #RUN
 def run(driver,losses):
-    board, game = setUp(driver, "intermediate")
+    board, game = setUp(driver, "expert")
     global loss
 
     listL=[(randrange(board.shape[0]),randrange(board.shape[1]))]
