@@ -1,7 +1,7 @@
 from game import Game
 from random import randrange
 import selenium
-
+import sys
 
 def Main(difficultyStr, losses, driver):
     gameObj = Game(driver, difficultyStr)
@@ -36,9 +36,14 @@ def Main(difficultyStr, losses, driver):
         Main(difficultyStr, losses, driver)
 
 
-def playTilWin():
-    losses = 0
+if __name__ == "__main__":
+    argList = ["beginner","intermediate","expert"]
     driver = selenium.webdriver.Chrome()
-    Main("expert", losses, driver)
-    driver.quit()
-    return losses
+    if len(sys.argv)==1:
+        Main("intermediate", 0, driver)
+    elif sys.argv[1] in argList:
+        driver = selenium.webdriver.Chrome()
+        Main(sys.argv[1], 0, driver)
+    else:
+        print("Argument not valid")
+        driver.close()
